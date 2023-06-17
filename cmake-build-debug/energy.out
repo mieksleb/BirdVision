@@ -1,0 +1,20 @@
+
+  At each step, we report the potential and kinetic energies.
+  The sum of these energies should be a constant.
+  As an accuracy check, we also print the relative error
+  in the total energy.
+
+      Step      Potential       Kinetic        (P+K-E0)/E0
+                Energy P        Energy K       Relative Energy Error
+
+         0               0               0             nan
+        10               0               0             nan
+        20               0               0             nan
+        30               0               0             nan
+        40               0               0             nan
+        50               0               0             nan
+        60               0               0             nan
+        70               0               0             nan
+        80               0               0             nan
+        90               0               0             nan
+       100               0               0             nan
