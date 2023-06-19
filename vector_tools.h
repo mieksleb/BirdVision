@@ -19,6 +19,7 @@
 using namespace std;
 
 double DotProduct (vector<double> &vec1, vector<double> &vec2);
+vector<double> CrossProduct(vector<double> &vec1, vector<double> &vec2);
 void DivideVectorByScalar(vector<double> &vec, double &scalar);
 void MultiplyVectorByScalar(vector<double> &vec, double &scalar);
 void PrintVector(vector<double> &vec);

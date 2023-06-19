@@ -24,6 +24,14 @@ double DotProduct(vector<double> &vec1, vector<double> &vec2){
     return result;
 }
 
+vector<double> CrossProduct(vector<double> &vec1, vector<double> &vec2){
+    vector<double> result(3);
+    result[0] = vec1[1] * vec2[2] - vec1[2] * vec2[1];
+    result[1] = vec1[2] * vec2[0] - vec1[0] * vec2[2];
+    result[2] = vec1[0] * vec2[1] - vec1[1] * vec2[0];
+    return result;
+}
+
 void DivideVectorByScalar(vector<double> &vec, double &scalar){
     transform (vec.begin(), vec.end(), vec.begin(), [&scalar](double c1) { return c1 / scalar; });
 }

@@ -17,17 +17,17 @@
 
 using namespace std;
 
-void initialize (string conf_path, vector<double> &pos, vector<double> &vel);
+void initialize (string conf_path, vector<double> &pos, vector<double> &vel, vector<double> &omega);
 
 
 double cpu_time ( );
 
 void timestamp ( );
 
-void update (vector<double> &pos, vector<double> &vel, vector<double> &force, vector<double> &old_force,
+void update (vector<double> &pos, vector<double> &vel, vector<double> &omega, vector<double> &force, vector<double> &old_force,
               vector<double> &acc, double dt);
 
-void compute ( vector<double> &pos, vector<double> &vel,
+void compute ( vector<double> &pos, vector<double> &vel, vector<double> &omega,
                vector<double> &force, double &pot, double &kin);
 
 
@@ -160,9 +160,7 @@ int main ( int argc, char *argv[] )
     ofstream last_conf_file;
     ofstream energy_file;
     traj_file.open(traj_file_name);
-    traj_file << endl;
     last_conf_file.open(last_conf_file_name);
-    last_conf_file << endl;
     energy_file.open(energy_file_name);
 
     energy_file << "\n";
@@ -183,13 +181,9 @@ int main ( int argc, char *argv[] )
     vector<double> pos(3,0);
     vector<double> acc(3,0);
     vector<double> vel(3,0);
+    vector<double> omega(3,0);
     vector<double> force(3,0);
     vector<double> old_force(3,0);
-
-    // Write initial part of trajectory file
-    traj_file << "1" << endl;
-    traj_file << endl;
-
 
     for ( step = 0; step <= step_num; step++ ) {
         potential = 0;
@@ -197,13 +191,13 @@ int main ( int argc, char *argv[] )
 
         if ( step == 0 )
         {
-            initialize(conf_path,pos,vel);
+            initialize(conf_path,pos,vel,omega);
             cout << "  Initial postion is " << pos.at(0) << " " << pos.at(1) << " " << pos.at(2) << endl;
             cout << "  Initial velocity is " << vel.at(0) << " " << vel.at(1) << " " << vel.at(2) << endl;
         }
         else
         {
-            update(pos,vel,force,old_force,acc, dt);
+            update(pos,vel,omega,force,old_force,acc, dt);
             // check if ball has hit net bounced
             if (pos[1] > 0 && pos[2] < net_height) {
                 cout << "  Ball has hit the net!" << endl;
@@ -221,7 +215,7 @@ int main ( int argc, char *argv[] )
             }
         }
 
-        compute(pos,vel,force,potential,kinetic);
+        compute(pos,vel,omega,force,potential,kinetic);
 
         if ( step == 0 )
         {
@@ -230,13 +224,16 @@ int main ( int argc, char *argv[] )
 
         if ( step % step_print == 0 )
         {
-            traj_file << "C " << fixed << setprecision(prec)
+            traj_file << fixed << setprecision(prec)
             << setw(width) << left << pos[0] << setw(width) << right
             << setw(width) << left << pos[1] << setw(width) << right
             << setw(width) << left << pos[2] << setw(width) << right
             << setw(width) << left << vel[0] << setw(width) << right
             << setw(width) << left << vel[1] << setw(width) << right
-            << setw(width) << left << vel[2] << right << endl;
+            << setw(width) << left << vel[2] << setw(width) << right
+            << setw(width) << left << omega[0] << setw(width) << right
+            << setw(width) << left << omega[1] << setw(width) << right
+            << setw(width) << left << omega[2] << right << endl;
 
 
             energy_file << "  " << setw(8) << step
@@ -278,7 +275,7 @@ int main ( int argc, char *argv[] )
 
 //****************************************************************************80
 
-void compute ( vector<double> &pos, vector<double> &vel,
+void compute ( vector<double> &pos, vector<double> &vel, vector<double> &omega,
                vector<double> &force, double &pot, double &kin) {
 
 //****************************************************************************80
@@ -292,11 +289,13 @@ void compute ( vector<double> &pos, vector<double> &vel,
     vector<double> direction; // unit vector pointing in direction of motion
     vector<double> drag_force;
     vector<double> grav_force;
+    vector<double> magnus_force;
     double f_drag;
 
     double speed_squared = DotProduct(vel, vel);
     double speed = pow (speed_squared, 0.5);
 
+    // kinetic and potential energies
     kin = 0.5 * mass * speed_squared;
     pot = mass * g * pos[2];
 
@@ -309,9 +308,16 @@ void compute ( vector<double> &pos, vector<double> &vel,
     drag_force = direction;
     MultiplyVectorByScalar(drag_force, f_drag); // normalize
 
+
+    // calculate the gravitational force
     force = {0, 0, 0};
     grav_force = {0, 0, - mass * g};
-    
+
+    // calculate the magnus force
+    magnus_force = CrossProduct( omega, vel);
+    double prefactor = 4*PI*rho/3;
+    MultiplyVectorByScalar(magnus_force, prefactor);
+
     AddVectors(force, drag_force);
     AddVectors(force, grav_force);
 
@@ -359,7 +365,7 @@ double cpu_time ( )
 
 
 
-void initialize (string conf_path, vector<double> &pos, vector<double> &vel)
+void initialize (string conf_path, vector<double> &pos, vector<double> &vel, vector<double> &omega)
 
 //****************************************************************************80
 //
@@ -393,8 +399,11 @@ void initialize (string conf_path, vector<double> &pos, vector<double> &vel)
                 if (counter < 3) {
                     pos[counter] = stod(s);
                 }
-                else if (3 <= counter) {
+                else if (3 <= counter && counter < 6) {
                     vel[counter - 3] = stod(s);
+                }
+                else if (6 <= counter){
+                    omega[counter - 6] = stod(s);
                 }
                 counter += 1;
             }
@@ -460,7 +469,7 @@ void timestamp ( )
 
 
 
-void update ( vector<double> &pos, vector<double> &vel, vector<double> &force, vector<double> &old_force,
+void update ( vector<double> &pos, vector<double> &vel, vector<double> &omega, vector<double> &force, vector<double> &old_force,
               vector<double> &acc, double dt)
 
 //****************************************************************************80
