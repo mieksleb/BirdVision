@@ -17,6 +17,8 @@ export default function CreateVisualiser({ balls }) {
     /**Reference passed to mount the 3D visualiser to the element.**/
     const mountRef = createRef();
 
+    const scale = 10;
+
     //On update of models.
     useEffect(() => {
         const mount = mountRef.current;
@@ -56,7 +58,7 @@ export default function CreateVisualiser({ balls }) {
         }
 
         function initRenderer() {
-            renderer = new THREE.WebGLRenderer();
+            renderer = new THREE.WebGLRenderer({alpha: true });
             renderer.setClearColor(0xffffff, 1);
             renderer.setSize(mount.clientWidth, mount.clientHeight);
             mount.appendChild(renderer.domElement);
@@ -82,10 +84,13 @@ export default function CreateVisualiser({ balls }) {
             //TennisCourtDimensions[length, width] (inches)
             const TennisCourtDimensions = [36, 78, 1];
             const TennisCourtColor = 0x0099ff;
+            const TennisCourtOffset = -1.5;
             const TennisCourtClearanceDimensions = [60, 120, 0.5];
             const TennisCourtClearanceColor = 0xb0e147;
-            createRectangle(TennisCourtDimensions, TennisCourtColor);
-            createRectangle(TennisCourtClearanceDimensions, TennisCourtClearanceColor);
+            const TennisCourtClearanceOffset = -1.5;
+
+            createRectangle(TennisCourtDimensions, TennisCourtColor, TennisCourtOffset);
+            createRectangle(TennisCourtClearanceDimensions, TennisCourtClearanceColor, TennisCourtClearanceOffset);
             //Create the lines. Length, width, thickness, 
             // const lines = [
             //     {positions = [36, 1, ]}
@@ -93,12 +98,11 @@ export default function CreateVisualiser({ balls }) {
 
         }
 
-        function createRectangle(dimensions, color){
-            const scale = 10;
+        function createRectangle(dimensions, color, offset){
             const geometry = new THREE.BoxGeometry(scale*dimensions[0], scale*dimensions[1], scale*dimensions[2]); // Set the dimensions of the box
-            const material = new THREE.MeshBasicMaterial({ color: color });
+            const material = new THREE.MeshBasicMaterial({ color: color,   opacity: 0.5, transparent:true});
             const square = new THREE.Mesh(geometry, material);
-            square.position.set( 0, 0, 0);
+            square.position.set( 0, offset, 0);
             square.rotation.set( Math.PI / 2, 0, 0);
             scene.add(square);
         }
@@ -116,7 +120,9 @@ export default function CreateVisualiser({ balls }) {
 
         function updateBallPosition() {
             const position = balls[0].position.split(' ').map(parseFloat);
-            renderedBalls[0].position.set( position[0], position[1], position[2]);
+            renderedBalls[0].position.set( scale*position[0], scale*position[1], scale*position[2]);
+            console.log("Ball position (scaled x10)");
+            console.log(renderedBalls[0].position);
         }
 
         //This function is for testing
@@ -134,6 +140,7 @@ export default function CreateVisualiser({ balls }) {
         function animate() {
             requestAnimationFrame(animate);
             updateBallPosition();
+            //updateStorePosition();
             renderer.render(scene, camera);
         };
 
@@ -141,7 +148,7 @@ export default function CreateVisualiser({ balls }) {
             mount.removeChild(renderer.domElement);
         };
 
-    }, [balls, mountRef]);
+    }, [mountRef]);
 
     return (
         <div ref={mountRef} style={{ width: '100%', height: '60%' }}>
