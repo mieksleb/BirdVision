@@ -16,6 +16,7 @@ import { connect } from 'react-redux';
 export default function CreateVisualiser({ balls }) {
     /**Reference passed to mount the 3D visualiser to the element.**/
     const mountRef = createRef();
+
     //On update of models.
     useEffect(() => {
         const mount = mountRef.current;
@@ -118,6 +119,7 @@ export default function CreateVisualiser({ balls }) {
             renderedBalls[0].position.set( position[0], position[1], position[2]);
         }
 
+        //This function is for testing
         function updateStorePosition() {
             // Generate a random number between 1 and -1
             const randomNum = 15*(Math.random() * 2 - 1);
@@ -132,7 +134,6 @@ export default function CreateVisualiser({ balls }) {
         function animate() {
             requestAnimationFrame(animate);
             updateBallPosition();
-            updateStorePosition();
             renderer.render(scene, camera);
         };
 
