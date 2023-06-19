@@ -7,7 +7,7 @@ Tennis ball trajectory prediction and visualisation.
 Use the package manager [pip](https://pip.pypa.io/en/stable/) to install foobar.
 
 ```bash
-pip install foobar
+g++ main.cpp
 ```
 
 ## Usage
