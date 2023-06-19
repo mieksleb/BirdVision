@@ -30,7 +30,7 @@ traj = trajectory.dat
 BirdVision's configuration file format contains the position, velocity and angular momentum of the ball. If the position of the ball is $\mathbf{r}$, the velocity $\mathbf{v}$ and angular momentum $\mathbf{\omega}$, then the correpsonding configuration file is:
 
 
-$r_{x}$ $r_{y}$ $r_{z}$ $v_{x}$ $v_{y}$ $v_{z}$ $\omega_{x}$ $\omega_{y}$ $\omega_{z}$
+$r_{x}$   $r_{y}$   $r_{z}$   $v_{x}$   $v_{y}$   $v_{z}$   $\omega_{x}$   $\omega_{y}$   $\omega_{z}$
 
 where $r_{x}$ is the component of $\mathbf{r}$ in the $x$ direction.
 
