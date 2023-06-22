@@ -13,10 +13,11 @@ double c_drag = 0.507; // coefficient of drag
 double c_lift = 1; // coefficient of lift
 double radius = 0.0343; // radius of tennis ball in meters
 double cross_area = PI * pow( radius ,2); // cross-sectional area of a tennis ball
-double net_height = 0.915; // height of net at centre
+double net_height_min = 0.915; // height of net at centre
+double net_height_max = 0.915; // height of net at post
 double court_length = 11.885; // distance from centre of net to centre of baseline in meters
 double width_inner = 4.115; // half the width of single court in meters
-double width_outer = 10.97; // half the width of doubles court in meters
+double width_outer = 10.97; // width of doubles court in meters
 double service_line_dist = 6.4; // distance from net to service line
 
 

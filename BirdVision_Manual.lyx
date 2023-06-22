@@ -1,0 +1,237 @@
+#LyX 2.3 created this file. For more info see http://www.lyx.org/
+\lyxformat 544
+\begin_document
+\begin_header
+\save_transient_properties true
+\origin unavailable
+\textclass extarticle
+\begin_preamble
+\usepackage{indentfirst}
+\usepackage{tikz}
+\usepackage{pgfplots}
+\date{}
+\pgfplotsset{compat=newest}
+\usepackage{tikz-3dplot}
+\usetikzlibrary{calc,arrows.meta,positioning,backgrounds} 
+\end_preamble
+\use_default_options true
+\begin_modules
+theorems-ams
+theorems-ams-extended
+theorems-sec
+\end_modules
+\maintain_unincluded_children false
+\language english
+\language_package default
+\inputencoding auto
+\fontencoding global
+\font_roman "default" "default"
+\font_sans "default" "default"
+\font_typewriter "default" "default"
+\font_math "auto" "auto"
+\font_default_family default
+\use_non_tex_fonts false
+\font_sc false
+\font_osf false
+\font_sf_scale 100 100
+\font_tt_scale 100 100
+\use_microtype false
+\use_dash_ligatures true
+\graphics default
+\default_output_format default
+\output_sync 0
+\bibtex_command default
+\index_command default
+\float_placement H
+\paperfontsize default
+\spacing single
+\use_hyperref false
+\papersize default
+\use_geometry true
+\use_package amsmath 1
+\use_package amssymb 1
+\use_package cancel 1
+\use_package esint 1
+\use_package mathdots 1
+\use_package mathtools 1
+\use_package mhchem 1
+\use_package stackrel 1
+\use_package stmaryrd 1
+\use_package undertilde 1
+\cite_engine basic
+\cite_engine_type default
+\biblio_style plain
+\use_bibtopic false
+\use_indices false
+\paperorientation portrait
+\suppress_date false
+\justification true
+\use_refstyle 1
+\use_minted 0
+\index Index
+\shortcut idx
+\color #008000
+\end_index
+\leftmargin 2cm
+\rightmargin 2cm
+\secnumdepth 3
+\tocdepth 3
+\paragraph_separation skip
+\defskip smallskip
+\is_math_indent 0
+\math_numbering_side default
+\quotes_style english
+\dynamic_quotes 0
+\papercolumns 1
+\papersides 1
+\paperpagestyle default
+\tracking_changes false
+\output_changes false
+\html_math_output 0
+\html_css_as_file 0
+\html_be_strict false
+\end_header
+
+\begin_body
+
+\begin_layout Title
+BirdVision
+\end_layout
+
+\begin_layout Subsection*
+Setup
+\end_layout
+
+\begin_layout Standard
+BirdVision is a classical dynamics package for computing the trajectory
+ of tennis balls.
+ We model a tennis ball as a perfectly spherical object with radius 
+\begin_inset Formula $R$
+\end_inset
+
+ which has a centre-of-mass position 
+\series bold
+
+\begin_inset Formula $\mathbf{r}$
+\end_inset
+
+
+\series default
+, velocity 
+\begin_inset Formula $\mathbf{v}$
+\end_inset
+
+, and angular momentum 
+\begin_inset Formula $\mathbf{\omega}$
+\end_inset
+
+.
+ For our coordinate system we choose the court to lie in the 
+\begin_inset Formula $xy$
+\end_inset
+
+-plane with the origin being the very centre of the court.
+ The ball has a mass 
+\begin_inset Formula $m$
+\end_inset
+
+ and the air density is 
+\begin_inset Formula $\rho$
+\end_inset
+
+.
+ For our system we will assume 
+\begin_inset Formula $R=0.0343\,\text{m}$
+\end_inset
+
+, 
+\begin_inset Formula $m=0.00575\,\text{kg}$
+\end_inset
+
+ and 
+\begin_inset Formula $\rho=1.293\,\text{kg}\,\text{m}^{-3}$
+\end_inset
+
+.
+\end_layout
+
+\begin_layout Subsection*
+Integrator
+\end_layout
+
+\begin_layout Standard
+Trajectories are propagated through the velocity-Verlet integrator that
+ for a discrete time-step 
+\begin_inset Formula $\Delta t$
+\end_inset
+
+, reads
+\end_layout
+
+\begin_layout Standard
+\begin_inset Formula 
+\begin{eqnarray*}
+\mathbf{r}\left(t+\Delta t\right) & \simeq & \mathbf{r}\left(t\right)+\mathbf{v}\left(t\right)\Delta t+\frac{\mathbf{f}\left(t\right)}{2m}\Delta t^{2}+\mathcal{O}\left(\Delta t^{3}\right),\\
+\mathbf{v}\left(t+\Delta t\right) & \simeq & \mathbf{v}\left(t\right)+\frac{\mathbf{f}\left(t\right)+\mathbf{f}\left(t+\Delta t\right)}{2m}\Delta t+\mathcal{O}\left(\Delta t^{3}\right).
+\end{eqnarray*}
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Standard
+Hence we may deduce the position and momentum of the ball at any time via
+ knowledge of the forces experienced by the ball.
+ 
+\end_layout
+
+\begin_layout Subsection*
+Forces
+\end_layout
+
+\begin_layout Standard
+The forces experience by a tennis ball include.
+ The gravitational force is 
+\begin_inset Formula 
+\[
+\mathbf{F}_{\text{grav}}=-mg\hat{\mathbf{z}}.
+\]
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Standard
+The magnitude of the drag force is given by the formula
+\begin_inset Formula 
+\[
+F_{\text{drag}}=\frac{\pi}{2}\rho R^{2}C_{\text{drag}}v{}^{2},
+\]
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Standard
+and acts in the opposite direction to the motion of the ball.
+ 
+\begin_inset Formula $C_{\text{drag}}$
+\end_inset
+
+ is the coefficient of drag, which we will assume to be 0.507.
+ The Magnus force due to the spin is 
+\begin_inset Formula 
+\[
+\mathbf{F}_{\text{spin}}=\frac{4\pi}{3}\rho R^{3}\mathbf{\omega}\times\mathbf{v}.
+\]
+
+\end_inset
+
+
+\end_layout
+
+\end_body
+\end_document

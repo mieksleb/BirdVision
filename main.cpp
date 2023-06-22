@@ -62,6 +62,7 @@ int main ( int argc, char *argv[] )
     string conf_path;
     string traj_file_name;
     string last_conf_file_name;
+    bool crossed_net = false;
 
     // get the current working directory, where the input file is situated
     char cwd_char[1024];
@@ -169,8 +170,8 @@ int main ( int argc, char *argv[] )
     energy_file << "  As an accuracy check, we also print the relative error\n";
     energy_file << "  in the total energy.\n";
     energy_file << "\n";
-    energy_file << "      Step      Potential       Kinetic        (P+K-E0)/E0\n";
-    energy_file << "                Energy P        Energy K       Relative Energy Error\n";
+    energy_file << "      Step      Potential       Kinetic        \n";
+    energy_file << "                Energy P        Energy K       \n";
     energy_file << "\n";
 
 
@@ -198,11 +199,17 @@ int main ( int argc, char *argv[] )
         else
         {
             update(pos,vel,omega,force,old_force,acc, dt);
-            // check if ball has hit net bounced
-            if (pos[1] > 0 && pos[2] < net_height) {
+            // check if ball has hit net or bounced
+            if ( !crossed_net && pos[1] > 0 && pos[2] < net_height_min) {
                 cout << "  Ball has hit the net!" << endl;
                 break;
             }
+            else if (!crossed_net && pos[1] > 0 && pos[2] > net_height_min) {
+                crossed_net = true;
+                cout << "  Ball has cleared the net!" << endl;
+
+            }
+
             if (pos[2] < 0) {
                 cout << "  Ball has bounced!" << endl;
                 if ( abs(pos[0]) < width_inner && pos[1] > 0 && pos[1] < court_length) {
@@ -238,8 +245,7 @@ int main ( int argc, char *argv[] )
 
             energy_file << "  " << setw(8) << step
                  << "  " << setw(14) << potential
-                 << "  " << setw(14) << kinetic
-                 << "  " << setw(14) << ( potential + kinetic - e0 ) / e0 << endl;
+                 << "  " << setw(14) << kinetic << endl;
 
         }
         if ( step == step_num ) {
