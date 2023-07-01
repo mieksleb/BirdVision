@@ -5,20 +5,36 @@
  */
 import * as THREE from 'three';
 import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls.js';
-import React, {useEffect, createRef } from 'react';
+import React, {useEffect, createRef, useState } from 'react';
+import { useDispatch } from 'react-redux';
 import { connect } from 'react-redux';
 import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js';
+import LoadingBar from './LoadingBar';
+import "./Visualiser.css";
+import * as mutations from '../store/mutations';
+
 
 
 /**
 * Function to create the 3D visualisation tool.
 * @param {object} ball - Ball data.
 * */
-export default function CreateVisualiser({ balls }) {
+function CreateVisualiser({ balls, court }) {
     /**Reference passed to mount the 3D visualiser to the element.**/
     const mountRef = createRef();
+    const dispatch = useDispatch();
+    
 
-    const scale = 10;
+    const ballRadius = 0.0343 // radius of ball in meters
+    const courtLength = 23.77; // length of ball in meters
+    const courtWidth = 10.97;
+    const [loading, setLoading] = useState(true);
+    const [percentage, setPercentage] = useState(0);
+    //const { loading, percentage } = court;
+
+    useEffect(() => {
+        console.log("percentage = " + percentage);
+    }, [percentage]);
 
     //On update of models.
     useEffect(() => {
@@ -29,8 +45,10 @@ export default function CreateVisualiser({ balls }) {
 
         var renderedBalls = [];
         var renderedCourt = [];
+        var renderedTail = [];
 
-        function init() {
+
+        async function init() {
             initScene();
             initCamera();
             initRenderer();
@@ -38,8 +56,9 @@ export default function CreateVisualiser({ balls }) {
             initLighting();
             //initGrid();
             //createEnvironment();
-            loadBalls(balls);
-            loadCourt();
+            await loadCourt();
+            loadBalls();
+            createTail();
             //createSphere();
             animate();
 
@@ -54,12 +73,12 @@ export default function CreateVisualiser({ balls }) {
         function initCamera() {
             const fov = 50;
             const aspect = mount.clientWidth / mount.clientHeight;
-            const near = 1;
+            const near = 0.01;
             const far = 3000;
             camera = new THREE.PerspectiveCamera(fov, aspect, near, far);
-            camera.position.set(0, 200, 50);
+            camera.position.set(0, 25, 3);
             camera.up.set(0, 0, 1);
-            camera.lookAt(new THREE.Vector3(0, 0, 10));
+            camera.lookAt(new THREE.Vector3(0, 0, 1));
         }
 
         function initRenderer() {
@@ -90,21 +109,21 @@ export default function CreateVisualiser({ balls }) {
 
         function createEnvironment() {
             //TennisCourtDimensions[length, width] (inches)
-            const TennisCourtDimensions = [10.97, 23.77, 1];
+            const TennisCourtDimensions = [courtWidth, courtLength, 0.5];
             const TennisCourtColor = 0x0099ff;
-            const TennisCourtOffset = -1.5;
-            const TennisCourtClearanceDimensions = [20, 40, 0.5];
+            const TennisCourtOffset = 0;
+            const TennisCourtClearanceDimensions = [100, 100, 0.5];
             const TennisCourtClearanceColor = 0xb0e147;
-            const TennisCourtClearanceOffset = -1.5;
+            const TennisCourtClearanceOffset = 0;
 
             createRectangle(TennisCourtDimensions, TennisCourtColor, TennisCourtOffset);
-            createRectangle(TennisCourtClearanceDimensions, TennisCourtClearanceColor, TennisCourtClearanceOffset);
+            //createRectangle(TennisCourtClearanceDimensions, TennisCourtClearanceColor, TennisCourtClearanceOffset);
 
 
         }
 
         function createRectangle(dimensions, color, offset){
-            const geometry = new THREE.BoxGeometry(scale*dimensions[0], scale*dimensions[1], scale*dimensions[2]); // Set the dimensions of the box
+            const geometry = new THREE.BoxGeometry(dimensions[0], dimensions[1], dimensions[2]); // Set the dimensions of the box
             const material = new THREE.MeshBasicMaterial({ color: color,   opacity: 0.5, transparent:true});
             const square = new THREE.Mesh(geometry, material);
             square.position.set( 0, offset, 0);
@@ -112,13 +131,38 @@ export default function CreateVisualiser({ balls }) {
             scene.add(square);
         }
 
+
+        // create a tube whose centre line is defined by some list of coordinates which acts as a trail
+        function createTail() {
+
+            const positions = [new THREE.Vector3(0, 0, 0), new THREE.Vector3(0, 0, 1)]
+
+          
+            const path = new THREE.CatmullRomCurve3(positions);
+            const tubularSegments = 10; // Adjust the number of segments as needed
+            const radiusSegments = 10; // Adjust the number of segments as needed
+            const closed = false; // Set to true if the tube should be closed
+
+
+
+            const tubeGeometry = new THREE.TubeGeometry(path, tubularSegments, ballRadius, radiusSegments, closed);
+            const material = new THREE.MeshBasicMaterial({ color: 0x00ff00 });
+            const tube = new THREE.Mesh(tubeGeometry, material);
+            tube.material.visible = false;
+            tube.position.set(0, 0, 0);
+            scene.add(tube)
+            renderedTail.push(tube);
+          
+          }
+          
+
         function createSphere() {
             // Create a black sphere
             const radius = 5; // Radius of the sphere
             const widthSegments = 32; // Number of horizontal segments
             const heightSegments = 32; // Number of vertical segments
             const TennisBallColor = 0xCEFF33;
-            const geometry = new THREE.SphereGeometry(radius, widthSegments, heightSegments); // Set the radius and segments
+            const geometry = new THREE.SphereGeometry(ballRadius, widthSegments, heightSegments); // Set the radius and segments
             const material = new THREE.MeshBasicMaterial({ color: TennisBallColor });
             const sphere = new THREE.Mesh(geometry, material);
             const position = balls[0].position.split(' ').map(parseFloat);
@@ -127,92 +171,146 @@ export default function CreateVisualiser({ balls }) {
             renderedBalls.push(sphere);
         }
 
+
+
+
         function loadBalls() {
             const loader = new GLTFLoader();
 
             loader.load('tennis_ball.gltf',
                 (data) => onLoad(data),
-                onProgress,
-                onError
+                //onProgress,
+                //onError
             );
 
             const onLoad = ( gltf ) =>{
                 var model = gltf.scene;
-                renderedBalls.push(model);
+                //renderedBalls.push(model);
                 scene.add(model); // Add the loaded model to the scene
                 console.log("Ball loaded")
                 const boundingBox = new THREE.Box3().setFromObject(model);
                 const size = new THREE.Vector3();
                 boundingBox.getSize(size);
-                const currentLength = size.x;
-                const scale = 1 / currentLength;
-                //console.log(model);
+                const scale = 4;
                 model.scale.set(scale, scale, scale);
-                model.position.set( 0, 0, 20);
+                model.position.set( 0, 0, -1);
                 renderedBalls.push(model);
-                //model.position.set( position[1], position[0], position[2]);
-                //console.log(renderedBalls);
+
                 }
-
-
-            function onProgress(xhr) {
-                console.log("3D model is" + (xhr.loaded / xhr.total) *100 +"% loaded");
-                console.log(xhr.total);
-                console.log(xhr.loaded);
-                }
-
-            function onError(error) {
-                console.error('Error loading model:', error);
-            }
-
 
           }
+        function onProgress(xhr) {
+            const xhr_total = 161594144 // size of glb if it cannot be included, will need updating with model
+            if (xhr.lengthComputable) {
+                const progress = (xhr.loaded / xhr.total) * 100;
+                const percent = Math.floor(progress);
+                setPercentage(percent);
+                // dispatch({ type: mutations.SET_PERCENTAGE, percentage: percent });
+                // court.percentage = percent;
+                
+                if ( percent === 100) {
+                    setLoading(false)
+                    //court.loading = false;
+                // dispatch({ type: mutations.SET_LOADING, loading: false });
+                }
+            }   
+            else {
+                const progress = (xhr.loaded / xhr_total) * 100;
+                const percent = Math.floor(progress);
+                console.log("Percentage is " + percent);
+                setPercentage(percent);
+                // dispatch({ type: mutations.SET_PERCENTAGE, percentage: percent });
+                // court.percentage = percent;
+                    
+                if ( percent === 100) {
+                    console.log("Setting loading false");
+                    setLoading(false)
+                    //court.loading = false;
+                    // dispatch({ type: mutations.SET_LOADING, loading: false });
+                }
+                // court.percentage = percent;
+                // dispatch({ type: mutations.SET_PERCENTAGE, percentage: percent });
+                // if ( percent === 100) {
+                //     court.loading = false;
+                //     dispatch({ type: mutations.SET_LOADING, loading: false });
+                // }
+
+            }
+        }
+        
+        function loadCourt() {
+            return new Promise((resolve, reject) => {
+                const loader = new GLTFLoader();
+
+                loader.load('tennis_court.glb',//'tennis_stadium_compressed.gltf'
+                    (data) => {
+                        onLoad(data);
+                        resolve(); // Resolve the promise when the model is loaded
+                      },
+                    
+                    //onProgress,
+                    //onError
+                );
+                // const position = balls[0].position.split(' ').map(parseFloat);
+                const onLoad = ( gltf ) =>{
+                    var model = gltf.scene;
+                    renderedCourt.push(model);
+                    scene.add(model); // Add the loaded model to the scene
+                    model.position.set( 0, 0, 0);
+                    model.rotation.x = Math.PI/2;
+                    
+                }
+
+
+                  function onError(error) {
+                    console.error('Error loading model:', error);
+                  }
+            });
+        }
+
 
         
-          function loadCourt() {
-            const loader = new GLTFLoader();
-
-            loader.load('tennis_court.gltf',
-                (data) => onLoad(data),
-                onProgress,
-                onError
-            );
-            // const position = balls[0].position.split(' ').map(parseFloat);
-            const onLoad = ( gltf ) =>{
-                var model = gltf.scene;
-                renderedCourt.push(model);
-                scene.add(model); // Add the loaded model to the scene
-                console.log(model);
-                model.position.set( 0, 0, 0);
-                model.rotation.x = Math.PI/2;
-                // scale up to match length
-                model.scale.set(5, 5, 5);
-                
-
-                }
-
-
-            function onProgress(xhr) {
-                console.log("3D model is" + (xhr.loaded / xhr.total) *100 +"% loaded");
-                console.log(xhr.total);
-                console.log(xhr.loaded);
-                }
-
-            function onError(error) {
-                console.error('Error loading model:', error);
-            }
-
-
-          }
         function updateBallPosition() {
             
             if(renderedBalls[0]){
-                const position = balls[0].position.split(' ').map(parseFloat);
-                //console.log(renderedBalls[0]);
-                renderedBalls[0].position.set( scale*position[0], scale*position[1], scale*position[2]);
-                // console.log(renderedBalls[0].position);
+                const position = balls[0].position
+                renderedBalls[0].position.set(position[0], position[1], position[2]);
             }
+        }
 
+        function updateTail() {
+            
+            if ( renderedTail[0] ) {
+                const position = balls[0].position
+                const positions = balls[0].positionHistory
+                const vectorPositions = [];
+  
+                if (positions.length < 2) {
+                    return; // Need at least 2 positions to create the curve
+                }
+
+                else {
+                    for ( let i = 0; i < positions.length; i++) {
+                        const pos = positions[i];
+                        vectorPositions.push(new THREE.Vector3( pos[0], pos[1], pos[2]));
+                    }
+                }
+
+    
+                const path = new THREE.CatmullRomCurve3(vectorPositions);
+                const tubularSegments = 64; // Adjust the number of segments as needed
+                const radiusSegments = 64; // Adjust the number of segments as needed
+                const closed = false; // Set to true if the tube should be closed
+    
+    
+                const tubeGeometry = new THREE.TubeGeometry(path, tubularSegments, ballRadius, radiusSegments, closed);
+                const material = new THREE.MeshBasicMaterial({ color: 0x00ff00 });
+                const tube = new THREE.Mesh(tubeGeometry, material);
+                tube.material.opacity = 0.1;  // Set the opacity value between 0 (fully transparent) and 1 (fully opaque)
+                tube.material.transparent = true;  // Enable transparency for the material
+                scene.add(tube)
+                renderedTail.push(tube);
+            }
         }
 
         //This function is for testing
@@ -223,9 +321,8 @@ export default function CreateVisualiser({ balls }) {
         /**Animate function for the scene */
         function animate() {
             requestAnimationFrame(animate);
-            //renderedCourt[0];
             updateBallPosition();
-            //updateStorePosition();
+            updateTail();
             renderer.render(scene, camera);
         };
 
@@ -234,10 +331,13 @@ export default function CreateVisualiser({ balls }) {
             mount.removeChild(renderer.domElement);
         };
 
-    }, [balls]);
+    }, [balls,court, percentage, setPercentage]);
 
     return (
-        <div ref={mountRef} style={{ width: '100%', height: '60%' }}>
+        <div style={{ position: 'relative', height: '100%' }}>
+            <div ref={mountRef} style={{ width: '100%', height: '60%' }}> 
+            {/* {loading && <LoadingBar loading={loading} percentage={percentage} />} */}
+            </div>
         </div>
     );
 }
@@ -251,7 +351,8 @@ export default function CreateVisualiser({ balls }) {
  */
 function mapStateToProps(state, ownProps) {
     return {
-        balls: state.balls
+        balls: state.balls,
+        court: state.court,
     }
 }
 

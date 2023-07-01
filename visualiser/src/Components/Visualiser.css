@@ -1,0 +1,58 @@
+/* .loading-indicator {
+    position: relative;
+    display: inline-block;
+    top: 10px;;
+    left: 10px;
+    width: 10%;
+    height: 5%;
+    background-color: #007bff;
+    transition: width 0.0s ease-in-out;
+  } */
+
+  
+/* .loading-indicator.loading {
+animation: loading-animation 2s linear infinite;
+}
+
+@keyframes loading-animation {
+0% {
+    width: 0;
+}
+50% {
+    width: 50%;
+}
+100% {
+    width: 100%;
+}
+} */
+
+.circular {
+    width: 60px; /* Set the width and height of the circular loading indicator */
+    height: 60px;
+    border-radius: 50%; /* Make it circular by setting the border-radius to 50% */
+    background-color: #f1f1f1; /* Set the background color of the loading indicator */
+    position: relative;
+  }
+  
+  .circular::after {
+    content: '';
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    width: 80%; /* Set the width of the progress bar inside the circular indicator */
+    height: 80%;
+    border-radius: 50%; /* Make the progress bar circular by setting the border-radius to 50% */
+    background-color: #00ff00; /* Set the color of the progress bar */
+  }
+  
+  .circular::before {
+    content: attr(data-percent); /* Get the percentage value from the 'data-percent' attribute */
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    font-size: 14px; /* Set the font size of the percentage text */
+    color: #000000; /* Set the color of the percentage text */
+  }
+  
