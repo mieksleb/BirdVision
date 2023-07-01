@@ -242,14 +242,14 @@ function CreateVisualiser({ balls, court }) {
             return new Promise((resolve, reject) => {
                 const loader = new GLTFLoader();
 
-                loader.load('tennis_court.glb',
+                loader.load('tennis_court.glb',//'tennis_stadium_compressed.gltf'
                     (data) => {
                         onLoad(data);
                         resolve(); // Resolve the promise when the model is loaded
                       },
                     
-                    onProgress,
-                    onError
+                    //onProgress,
+                    //onError
                 );
                 // const position = balls[0].position.split(' ').map(parseFloat);
                 const onLoad = ( gltf ) =>{
@@ -336,7 +336,7 @@ function CreateVisualiser({ balls, court }) {
     return (
         <div style={{ position: 'relative', height: '100%' }}>
             <div ref={mountRef} style={{ width: '100%', height: '60%' }}> 
-            {loading && <LoadingBar loading={loading} percentage={percentage} />}
+            {/* {loading && <LoadingBar loading={loading} percentage={percentage} />} */}
             </div>
         </div>
     );

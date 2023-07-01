@@ -54,15 +54,17 @@ int main ( int argc, char *argv[] )
     int step;
     int step_num;
     int step_print;
-    int width = 10;
-    int prec = 4;
+    int width = 10; // width of output values
+    int prec = 4; // dp precision of output values
     int step_print_index;
     int step_print_num;
     string top_file_name;
     string conf_path;
     string traj_file_name;
+    string event_file_name;
     string last_conf_file_name;
     bool crossed_net = false;
+    bool is_in = false;
 
     // get the current working directory, where the input file is situated
     char cwd_char[1024];
@@ -98,7 +100,7 @@ int main ( int argc, char *argv[] )
                 string val = line.substr(start, end_str);
                 search.erase( std::remove_if( search.begin(), search.end(), ::isspace ), search.end() );
                 val.erase( std::remove_if( val.begin(), val.end(), ::isspace ), val.end() );
-               if ( search == "steps" )
+                if ( search == "steps" )
                 {
                     step_num = stoi(val);
                 }
@@ -110,22 +112,26 @@ int main ( int argc, char *argv[] )
                 {
                     dt = stod(val);
                 }
-               else if ( search == "mass" )
-               {
+                else if ( search == "mass" )
+                {
                    mass = stod(val);
-               }
+                }
                 else if ( search == "conf" )
                 {
                     conf_path = val;
                 }
-               else if ( search == "traj" )
-               {
+                else if ( search == "traj" )
+                {
                    traj_file_name = val;
-               }
-               else if ( search == "last_conf" )
-               {
+                }
+                else if ( search == "event" )
+                {
+                    event_file_name = val;
+                }
+                else if ( search == "last_conf" )
+                {
                    last_conf_file_name = val;
-               }
+                }
 
             }
         }
@@ -158,22 +164,27 @@ int main ( int argc, char *argv[] )
     string energy_file_name = "energy.out";
     // open all files to be written to
     ofstream traj_file;
+    ofstream event_file;
     ofstream last_conf_file;
     ofstream energy_file;
     traj_file.open(traj_file_name);
-    last_conf_file.open(last_conf_file_name);
+    event_file.open(event_file_name);
     energy_file.open(energy_file_name);
 
     energy_file << "\n";
     energy_file << "  At each step, we report the potential and kinetic energies.\n";
-    energy_file << "  The sum of these energies should be a constant.\n";
-    energy_file << "  As an accuracy check, we also print the relative error\n";
-    energy_file << "  in the total energy.\n";
+//    energy_file << "  The sum of these energies should be a constant.\n";
+//    energy_file << "  As an accuracy check, we also print the relative error\n";
+//    energy_file << "  in the total energy.\n";
     energy_file << "\n";
     energy_file << "      Step      Potential       Kinetic        \n";
     energy_file << "                Energy P        Energy K       \n";
     energy_file << "\n";
 
+
+    event_file << fixed << setw(width) << left << "Net?" << setw(width) << right
+    << setw(width) << left << "Out?" << setw(width) << right
+    << setw(width) << left << "Impact Position" << setw(width) << right << endl;
 
     ctime = cpu_time ( );
 
@@ -195,6 +206,7 @@ int main ( int argc, char *argv[] )
             initialize(conf_path,pos,vel,omega);
             cout << "  Initial postion is " << pos.at(0) << " " << pos.at(1) << " " << pos.at(2) << endl;
             cout << "  Initial velocity is " << vel.at(0) << " " << vel.at(1) << " " << vel.at(2) << endl;
+            cout << "  Initial angular velocity is " << omega.at(0) << " " << omega.at(1) << " " << omega.at(2) << endl;
         }
         else
         {
@@ -202,11 +214,17 @@ int main ( int argc, char *argv[] )
             // check if ball has hit net or bounced
             if ( !crossed_net && pos[1] > 0 && pos[2] < net_height_min) {
                 cout << "  Ball has hit the net!" << endl;
+                crossed_net = true;
+                event_file << 1 << 1 << fixed << setprecision(prec)
+               << setw(width) << left << pos[0] << setw(width) << right
+               << setw(width) << left << pos[1] << setw(width) << right
+               << setw(width) << left << pos[2] << setw(width) << right << endl;
                 break;
             }
             else if (!crossed_net && pos[1] > 0 && pos[2] > net_height_min) {
                 crossed_net = true;
                 cout << "  Ball has cleared the net!" << endl;
+                event_file << fixed << setw(width) << left << 0 << setw(width) << right;
 
             }
 
@@ -214,14 +232,23 @@ int main ( int argc, char *argv[] )
                 cout << "  Ball has bounced!" << endl;
                 if ( abs(pos[0]) < width_inner && pos[1] > 0 && pos[1] < court_length) {
                     cout << "  Ball is in! :-)" << endl;
+                    is_in = true;
+                    event_file << fixed << setw(width) << left << 0 << setw(width) << right;
                 }
                 else {
                     cout << "  Ball is out! >:-(" << endl;
+                    is_in = false;
+                    event_file << fixed << setw(width) << left << 1 << setw(width) << right;
                 }
+                event_file << fixed << setprecision(prec)
+               << setw(width) << left << pos[0] << setw(width) << right
+               << setw(width) << left << pos[1] << setw(width) << right
+               << setw(width) << left << pos[2] << setw(width) << right << endl;
                 break;
             }
         }
 
+        // compute forces and energies
         compute(pos,vel,omega,force,potential,kinetic);
 
         if ( step == 0 )
@@ -248,15 +275,9 @@ int main ( int argc, char *argv[] )
                  << "  " << setw(14) << kinetic << endl;
 
         }
-        if ( step == step_num ) {
-
-            last_conf_file << "C " << pos.at(0) << " " << pos.at(1) << " " << pos.at(2) << endl;
-
-        }
 
     }
     traj_file.close();
-    last_conf_file.close();
     energy_file.close();
 //
 //  Report timing.
@@ -300,6 +321,9 @@ void compute ( vector<double> &pos, vector<double> &vel, vector<double> &omega,
 
     double speed_squared = DotProduct(vel, vel);
     double speed = pow (speed_squared, 0.5);
+    double spin = pow( DotProduct(omega, omega), 0.5);
+    double spin_ratio = radius * spin / speed;
+    double c_lift = 0.6 * spin_ratio;
 
     // kinetic and potential energies
     kin = 0.5 * mass * speed_squared;
@@ -307,7 +331,6 @@ void compute ( vector<double> &pos, vector<double> &vel, vector<double> &omega,
 
     direction = vel;
     DivideVectorByScalar(direction, speed); //normalize
-
 
     // calculate the drag force
     f_drag = - 0.5 * rho * cross_area * c_drag * speed_squared;
@@ -320,12 +343,15 @@ void compute ( vector<double> &pos, vector<double> &vel, vector<double> &omega,
     grav_force = {0, 0, - mass * g};
 
     // calculate the magnus force
-    magnus_force = CrossProduct( omega, vel);
-    double prefactor = 4*PI*rho/3;
+    magnus_force = CrossProduct( omega, vel); // direction of force is cross product of velocity and spin
+
+    double prefactor = 0.5 * c_lift * cross_area * rho * speed_squared / (spin * speed);
     MultiplyVectorByScalar(magnus_force, prefactor);
+
 
     AddVectors(force, drag_force);
     AddVectors(force, grav_force);
+    AddVectors(force, magnus_force);
 
 
 
@@ -501,15 +527,39 @@ void update ( vector<double> &pos, vector<double> &vel, vector<double> &omega, v
 
     double factor = dt / (2 * mass);
     double factor2 = factor * dt;
-
-
-    // velocity verlet algorithm
+//
+//
+////  velocity Verlet algorithm
     for (int i = 0; i < 3; i++) {
-        pos[i] += vel[i] * dt + force[i] * factor2;
+        pos[i] += vel[i] * dt + old_force[i] * factor2;
         vel[i] += (force[i] + old_force[i]) * factor;
     }
 
     old_force = force;
+
+
+//////     Leapfrog algorithm
+////     Update velocities at half time step
+//    for (int i = 0; i < 3; i++) {
+//        vel[i] += force[i] * factor;
+//    }
+//
+//    // Update positions at full time step
+//    for (int i = 0; i < 3; i++) {
+//        pos[i] += vel[i] * dt;
+//    }
+//
+////     Update forces based on new positions
+//    compute ( pos, vel, omega, force, factor, factor);
+//
+//    // Update velocities at full time step
+//    for (int i = 0; i < 3; i++) {
+//        vel[i] += (force[i]) * factor;
+//    }
+//
+//    old_force = force;
+
+
 
 
     return;
