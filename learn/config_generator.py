@@ -131,6 +131,7 @@ for i, val_list in enumerate( zip (position_list, velocity_list, angular_velocit
     
     
 print(f"{npoints} trajectories simulated!")
+
     
     
         
