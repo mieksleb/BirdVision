@@ -1,6 +1,6 @@
 # BirdVision
 
-Tennis ball trajectory prediction and visualisation using classical dynamics and machine learning.
+Tennis ball trajectory prediction and visualisation using classical dynamics and machine learning. A full description can be found in the [manual](BirdVision.pdf).
 
 ![Alt text](/3D_objects/Rendered_Images/ball_render_sleb2.png?raw=true "Optional Title")
 
@@ -10,8 +10,7 @@ Tennis ball trajectory prediction and visualisation using classical dynamics and
 
 ## Machine Learning
 
-The [learn](learn) directory included data set generation scripts and a Pytorch neural network model for line calling prediction.
-
+The [learn](learn) directory includes data set generation scripts and a Pytorch neural network model for line calling prediction.
 
 
 ## Visualiser
