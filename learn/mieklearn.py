@@ -21,7 +21,7 @@ from torch.utils.data import random_split
 import matplotlib.pyplot as plt
 
 
-data_root = "/Users/michaelselby/BirdVision/data_folder"
+data_root = "/Users/michaelselby/BirdVision/learn/data_folder"
 data_csv = data_root + "/data.csv"
 # with open(data_csv, 'w', newline='') as file:
 #     writer = csv.writer(file)
@@ -52,7 +52,7 @@ class CustomDataset(Dataset):
             for line in lines:
                 entries = line.strip().split(',')
                 self.features.append(list(map(float, entries[:9])))
-                self.labels.append(list(map(float, entries[9])))
+                self.labels.append(list(map(float, entries[10])))
         
         
         mean_list = []
@@ -221,6 +221,6 @@ for epoch in range(num_epochs):
     )
     
     
-torch.save(model.state_dict(), "model.pth")
+torch.save(model.state_dict(), "model_net.pth")
 
 
