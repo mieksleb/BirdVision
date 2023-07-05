@@ -8,64 +8,32 @@ Neural Network which trains on simulation data from BirdVision
 @author: michaelselby
 """
 
-import os
-import pandas as pd
-import csv
+
 import numpy as np
 import torch
 import torch.nn as nn
-from torchvision import transforms
 from torch.utils.data import Dataset, DataLoader
 from torch.utils.data import random_split
-# from torchvision.datasets import CSVDataset
-import matplotlib.pyplot as plt
-
-
-data_root = "/Users/michaelselby/BirdVision/learn/data_folder"
-data_csv = data_root + "/data.csv"
-# with open(data_csv, 'w', newline='') as file:
-#     writer = csv.writer(file)
-#     for i in range(99925):
-#         # Create a unique folder for each item
-#         item_folder = os.path.join(data_root, f"traj_{i}")
-#         full_path = os.path.abspath(item_folder)
-#         os.makedirs(item_folder, exist_ok=True)
-#         with open ( full_path + "/init.conf", "r" ) as file:
-#             lines = file.readlines()
-#             split_line = lines[0].split()
-        
-#         with open ( full_path + "/event.dat", "r" ) as file:
-#             lines = file.readlines()
-#             split_line  += lines[1].split()
-        
-#         writer.writerow(split_line)
             
             
 class CustomDataset(Dataset):
-    def __init__(self, csv_file):
+    def __init__(self, csv_file, features_indices, labels_indices):
         self.features = []
         self.labels = []
+        start1, end1 = features_indices
+        start2, end2 = labels_indices
 
         # Read the CSV file and extract data and labels
         with open(csv_file, 'r') as file:
             lines = file.readlines()
             for line in lines:
                 entries = line.strip().split(',')
-                self.features.append(list(map(float, entries[:9])))
-                self.labels.append(list(map(float, entries[10])))
-        
-        
-        mean_list = []
-        std_list = []
-    
+                self.features.append(list(map(float, entries[start1:end1])))
+                self.labels.append(list(map(float, entries[start2:end2])))
         
         # Convert features and labels to tensors
         self.features = torch.tensor(self.features, dtype=torch.float32)
         self.labels = torch.tensor(self.labels, dtype=torch.float32)
-        
-        # Calculate mean and standard deviation for each feature
-        # mean_list = [torch.mean(self.features[:, i]) for i in range(9)]
-        # std_list = [torch.std(self.features[:, i]) for i in range(9)]
         
         # Calculate mean and standard deviation for each feature
         self.mean = torch.mean(self.features, dim=0)
@@ -86,55 +54,83 @@ class CustomDataset(Dataset):
         return features, labels
     
     
-class NeuralNetwork(nn.Module):
-    def __init__(self):
+    
+class NeuralNetworkTrainer:
+    def __init__(self, model, train_loader, val_loader, loss_fn, optimizer):
+        self.model = model
+        self.train_loader = train_loader
+        self.val_loader = val_loader
+        self.loss_fn = loss_fn
+        self.optimizer = optimizer
+        self.train_losses = []
+        self.val_losses = []
+        self.train_metrics = []
+        self.val_metrics = []
+
+    def train(self, num_epochs, compute_accuracies = False):
         
-        super(NeuralNetwork, self).__init__()
-        self.fc1 = nn.Linear(9, 64)
-        self.relu = nn.ReLU()
-        self.fc2 = nn.Linear(64, 64)
-        self.fc3 = nn.Linear(64, 1)
-        self.sigmoid = nn.Sigmoid()
-    
-    def forward(self, x):
-        x = self.fc1(x)
-        x = self.relu(x)
-        x = self.fc2(x)
-        x = self.relu(x)
-        x = self.fc3(x)
-        x = self.sigmoid(x)
+        if compute_accuracies:
+            self.train_accs = []
+            self.val_accs = []
         
-        return x
+        for epoch in range(num_epochs):
+            self.model.train()
+            train_loss_list, val_loss_list = [], []
+            
+            for batch_idx, (features, labels) in enumerate(self.train_loader):
+                # Forward pass
+                outputs = self.model(features)
+                train_loss = self.loss_fn(outputs, labels)
+                
+                # Backward pass
+                self.optimizer.zero_grad()
+                train_loss.backward()
+                self.optimizer.step()
+                
+                train_loss_list.append(train_loss.item())
+                
+            print(
+                f"Epoch {epoch+1:02d}/{num_epochs:02d}"
+                f" | Batch {batch_idx+1:02d}/{len(self.train_loader):02d}"
+                f" | Train Loss {train_loss:.3f}"
+            )
     
+            self.model.eval()
+            for batch_idx, (features, labels) in enumerate(self.val_loader):
+                with torch.no_grad():
+                    outputs = self.model(features)
+                    val_loss = self.loss_fn(outputs, labels)
+                    val_loss_list.append(val_loss.item())
     
+            train_loss = np.mean(train_loss_list)
+            val_loss = np.mean(val_loss_list)
+    
+            self.train_losses.append(train_loss)
+            self.val_losses.append(val_loss)
+    
+            if compute_accuracies:
+                train_acc = compute_binary_accuracy(self.model, self.train_loader)
+                val_acc = compute_binary_accuracy(self.model, self.val_loader)
+                train_acc = compute_binary_accuracy(self.model, self.train_loader)
+                val_acc = compute_binary_accuracy(self.model, self.val_loader)
+
+                self.train_accs.append(train_acc)
+                self.val_accs.append(val_acc)
+            
+            print(
+                f"Train accuracy: {train_acc:.3f}"
+                f" | Val accuracy: {val_acc:.3f}\n"
+                "------------------------------------------------"
+            )
+            
+    def save_model( self,  model_name = "model.pth"):
+        torch.save(self.model.state_dict(), model_name)
+
+        
 
 
 
-dataset = CustomDataset( data_csv )
-
-# Split the dataset into training and validation sets
-train_size = int(0.9 * len(dataset))
-val_size = len(dataset) - train_size
-
-train_dataset, val_dataset = random_split(dataset, [train_size, val_size])
-
-# Create the data loader
-train_loader = DataLoader(train_dataset, batch_size=32, shuffle=True) # 32 reccomended but any power of 2 between 16-512 is ok
-val_loader = DataLoader(val_dataset, batch_size=32, shuffle=True)
-
-
-
-# Define the CSV file and transform
-transform = transforms.Compose([
-    transforms.ToTensor(),
-    transforms.Normalize((0.5,), (0.5,))
-])
-
-# Create the dataset
-# dataset = CSVDataset(data_csv, transform=transform, target_transform=transform)
-
-
-def compute_accuracy(model, dataloader):
+def compute_binary_accuracy(model, dataloader):
     """
     This function puts the model in evaluation mode (model.eval()) and calculates the accuracy with respect to the input dataloader
     """
@@ -153,74 +149,28 @@ def compute_accuracy(model, dataloader):
     return correct / total_examples
 
 
-
-
-
-# Create an instance of the neural network
-model = NeuralNetwork()
-
-# Define the loss function and optimizer
-loss_fn = nn.BCELoss()  # Binary Cross Entropy Loss
-optimizer = torch.optim.SGD(model.parameters(), lr=0.01)
-
-
-losses = []
-
-
-# Number of epochs, 3 times the dimension of dataset good rule of thumb
-num_epochs = 27
-
-train_losses, val_losses = [], []
-train_accs, val_accs = [], []
-
-for epoch in range(num_epochs):
-
-    model = model.train()
-    train_loss_list, val_loss_list = [], []
-    for batch_idx, (features, labels) in enumerate(train_loader):
-
-        # Forward pass
-        outputs = model(features)
-        train_loss = loss_fn(outputs, labels)
-        
-        # Backward Pass
-        optimizer.zero_grad()
-        train_loss.backward()
-        optimizer.step()
-        
-        train_loss_list.append(train_loss.item())
-        
-    print(
-        f"Epoch {epoch+1:02d}/{num_epochs:02d}"
-        f" | Batch {batch_idx:02d}/{len(train_loader):02d}"
-        f" | Train Loss {train_loss:.3f}"
-        )
-
+def compute_position_accuracy(model, dataloader):
+    """
+    This function puts the model in evaluation mode (model.eval()) and calculates the accuracy with respect to the input dataloader
+    """
     model = model.eval()
-    for batch_idx, (features, labels) in enumerate(val_loader):
+    diff = 0
+    total_examples = 0
+    for idx, (features, labels) in enumerate(dataloader):
         with torch.no_grad():
-            
-            outputs = model(features)
+            predictions = model(features)
+            # print(labels.shape)
+            for i in range(int(labels.shape[0])):
+                diff += ( predictions[i,:] - labels[i,:] ).pow(2).sum(3).sqrt()
+                print(diff)
+                total_examples += 1
+    return diff / total_examples
 
-            val_loss = loss_fn(outputs, labels)
-            val_loss_list.append(val_loss.item())
 
-    train_losses.append(np.mean(train_loss_list))
-    val_losses.append(np.mean(val_loss_list))
 
-    train_acc = compute_accuracy(model, train_loader)
-    val_acc = compute_accuracy(model, val_loader)
 
-    train_accs.append(train_acc)
-    val_accs.append(val_acc)
 
-    print(
-        f"Train accuracy: {train_acc:.3f}"
-        f" | Val accuracy: {val_acc:.3f}\n"
-        "------------------------------------------------"
-    )
     
-    
-torch.save(model.state_dict(), "model_net.pth")
+
 
 
